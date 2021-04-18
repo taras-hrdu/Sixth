@@ -46,24 +46,28 @@ devices_schema = DevicesSchema(many=True)
 def get_devices():
     devices = Devices.query.all()
     result = devices_schema.dump(devices)
+
     return jsonify(result)
 
 
 @app.route("/devices/<id>", methods=["GET"])
 def get_device(id):
     device = Devices.query.get(id)
+    
     if device is None:
         abort(404)
+
     return device_schema.jsonify(device)
 
 
 @app.route("/devices", methods=["POST"])
 def add_device():
-    new_device = Devices(request.json['brand'], request.json['price'], request.json['name'], 
-    request.json['items_for_cake'], request.json['weight_in_kg'], request.json['color'], 
-    request.json['power'], request.json['guarantee'])
+    data = DevicesSchema().load(request.json)
+    new_device = Devices(**data)
+
     db.session.add(new_device)
     db.session.commit()
+
     return device_schema.jsonify(new_device)
 
 
@@ -72,14 +76,11 @@ def update_device(id):
     device = Devices.query.get(id)
     if device is None:
         abort(404)
-    device.brand = request.json['brand']
-    device.price = request.json['price']
-    device.name = request.json['name']
-    device.items_for_cake = request.json['items_for_cake']
-    device.weight_in_kg = request.json['weight_in_kg']
-    device.color = request.json['color']
-    device.power =  request.json['power']
-    device.guarantee = request.json['guarantee']
+    
+    data = DevicesSchema().load(request.json)
+    for i in data:
+        setattr(device, i, request.json[i])
+
     db.session.commit()
     return device_schema.jsonify(device)
 
@@ -87,10 +88,13 @@ def update_device(id):
 @app.route("/devices/<id>", methods=["DELETE"])
 def delete_device(id):
     device = Devices.query.get(id)
+
     if device is None:
         abort(404)
+
     db.session.delete(device)
     db.session.commit()
+
     return device_schema.jsonify(device)
 
 
